@@ -4,7 +4,15 @@ with lib;
 
 let
 
-  cfg = config.programs.zsh.zplug;
+  zshCfg = config.programs.zsh;
+
+  cfg = zshCfg.zplug;
+
+  relToDotDir = file: (optionalString (zshCfg.dotDir != null)
+    (zshCfg.dotDir + "/")) + file;
+
+  pluginsDir = if zshCfg.dotDir != null then
+    relToDotDir "plugins" else ".zsh/plugins";
 
   pluginModule = types.submodule ({ config, ... }: {
     options = {
@@ -37,6 +45,7 @@ in {
     home.packages = [ pkgs.zplug ];
 
     programs.zsh.initExtraBeforeCompInit = ''
+      export ZPLUG_HOME=$HOME/${pluginsDir}
       source ${pkgs.zplug}/init.zsh
 
       ${optionalString (cfg.plugins != [ ]) ''
@@ -45,11 +54,11 @@ in {
             optionalString (plugin.tags != [ ]) ''
               ${concatStrings (map (tag: ", ${tag}") plugin.tags)}
             ''
-          } 
+          }
         '') cfg.plugins)}
       ''}
 
-      zplug install
+      ! zplug check && zplug install
       zplug load
     '';
 
